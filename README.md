@@ -1,2 +1,6 @@
 # toon
-A Ruby gem that makes it easy to cleanup and format data
+
+`toon` is a Ruby gem that makes it easy to cleanup and format data.
+
+## Example
+

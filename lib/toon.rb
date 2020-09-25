@@ -1,0 +1,151 @@
+class Object
+  def blank?
+    respond_to?(:empty?) or return !self
+    empty? or respond_to?(:strip) && strip.empty?
+  end
+
+  def present?
+    !blank?
+  end
+
+  def present(default=nil)
+    blank? ? default : self
+  end
+  alias :if_blank :present
+end
+
+def to_phone(str)
+  return "" if str.blank?
+
+  # prepare to parse
+  num = str.to_s.squeeze(' ').strip
+
+  # pluck off extension, tries several variants
+  num, ext = num.split(/\s*(?:ext?\.?|x|#|:|,)\s*/i, 2)
+  ext.gsub!(/\D+/,'') if ext
+
+  # adjust base number, allow only domestic phones
+  num = num.sub(/\A[^2-9]*/, '').gsub(/\D+/, '')
+
+  # assemble final number
+  if num =~ /\A([2-9][0-8][0-9])([2-9]\d\d)(\d{4})\z/
+    num = "(#{$1}) #{$2}-#{$3}"
+    num << ", ext. #{ext}" if num && ext
+  else
+    num = ext = nil
+  end
+
+  num
+end
+
+$STATE_MAP ||= <<~end.split(/(?:\n|  +)/).inject({}) {|h, e| h.store(*e.split(' ', 2)); h}
+  AK Alaska                LA Louisiana       PA Pennsylvania
+  AL Alabama               MA Massachusetts   PR Puerto Rico
+  AR Arkansas              MD Maryland        RI Rhode Island
+  AS American Samoa        ME Maine           SC South Carolina
+  AZ Arizona               MI Michigan        SD South Dakota
+  CA California            MN Minnesota       TN Tennessee
+  CO Colorado              MO Missouri        TX Texas
+  CT Connecticut           MS Mississippi     UT Utah
+  DC District of Columbia  MT Montana         VA Virginia
+  DE Delaware              NC North Carolina  VI Virgin Islands
+  FL Florida               ND North Dakota    VT Vermont
+  GA Georgia               NE Nebraska        WA Washington
+  GU Guam                  NH New Hampshire   WI Wisconsin
+  HI Hawaii                NJ New Jersey      WV West Virginia
+  IA Iowa                  NM New Mexico      WY Wyoming
+  ID Idaho                 NV Nevada
+  IL Illinois              NY New York
+  IN Indiana               OH Ohio
+  KS Kansas                OK Oklahoma
+  KY Kentucky              OR Oregon
+end
+
+$STATE_ABBREV ||= $STATE_MAP.inject({}) {|h, (k, v)| h[k] = h[v.upcase] = k; h }
+
+def toon(cell, func=nil, *args, **opts, &code)
+  if block_given?
+    yield cell
+  else
+    case func
+    when nil then cell
+    when 'to_decimal'
+      prec = 2
+      if cell[/\A\s*\$?\s*([-+])?\s*\$?\s*([-+])?\s*(\d[,\d]*)?(\.\d*)?\s*\z/]
+        sign = "#{$1}#{$2}".squeeze.include?("-") ? "-" : ""
+        left = $3.blank? ? "0" : $3.delete(",")
+        decs = $4.blank? ? nil : $4
+        "%.*f" % [prec, "#{sign}#{left}#{decs}".to_f]
+      else
+        ""
+      end
+    when 'to_phone' then to_phone(cell)
+    when 'to_zip'   then to_zip(cell)
+    when 'to_yyyymmdd'
+      case cell
+        when /^((?:19|20)\d{2})(\d{2})(\d{2})$/      then "%s%s%s"       % [$1, $2, $3          ] # YYYYMMDD
+        when /^(\d{2})(\d{2})((?:19|20)\d{2})$/      then "%s%s%s"       % [$3, $1, $2          ] # MMDDYYYY
+        when /^(\d{1,2})([-\/.])(\d{1,2})\2(\d{4})$/ then "%s%02d%02d"   % [$4, $1.to_i, $3.to_i] # M/D/Y
+        when /^(\d{4})([-\/.])(\d{1,2})\2(\d{1,2})$/ then "%s%02d%02d"   % [$1, $3.to_i, $4.to_i] # Y/M/D
+        when /^(\d{1,2})([-\/.])(\d{1,2})\2(\d{2})$/
+          year = $4.to_i
+          year += year < (Time.now.year % 100 + 5) ? 2000 : 1900
+          "%04d%02d%02d" % [year, $1.to_i, $3.to_i] # M/D/Y
+        else ""
+      end
+    when 'to_yyyymmdd_ymd'
+      toon(cell, 'to_yyyymmdd') =~ /^(\d{4})(\d{2})(\d{2})$/ ? "#{$2}/#{$3}/#{$1}" : cell
+    when 'tune'
+      o = {}; opts.each {|e| o[e]=true}
+      s = cell
+      s = s.downcase.gsub(/\s\s+/, ' ').strip.gsub(/(?<=^| |[\d[:punct:]])([[[:alpha:]]])/i) { $1.upcase } # general case
+      s.gsub!(/\b([a-z])\. ?([bcdfghjklmnpqrstvwxyz])\.?(?=\W|$)/i) { "#$1#$2".upcase } # initials (should this be :name only?)
+      s.gsub!(/\b([a-z](?:[a-z&&[^aeiouy]]{1,4}))\b/i) { $1.upcase } # uppercase apparent acronyms
+      s.gsub!(/\b([djs]r|us|acct|[ai]nn?|apps|ed|erb|esq|grp|in[cj]|of[cf]|st|up)\.?(?=\W|$)/i) { $1.capitalize } # force camel-case
+      s.gsub!(/(^|(?<=\d ))?\b(and|at|as|of|the|in|on|or|for|to|by|de l[ao]s?|del?|(el-)|el|las)($)?\b/i) { ($1 || $3 || $4) ? $2.downcase.capitalize : $2.downcase } # prepositions
+      s.gsub!(/\b(mc|mac(?=d[ao][a-k,m-z][a-z]|[fgmpw])|[dol]')([a-z])/i) { $1.capitalize + $2.capitalize } # mixed case (Irish)
+      s.gsub!(/\b(ahn|an[gh]|al|art[sz]?|ash|e[dnv]|echt|elms|emms|eng|epps|essl|i[mp]|mrs?|ms|ng|ock|o[hm]|ong|orr|orth|ost|ott|oz|sng|tsz|u[br]|ung)\b/i) { $1.capitalize } # if o[:name] # capitalize
+      s.gsub!(/(?<=^| |[[:punct:]])(apt?s?|arch|ave?|bldg|blvd|cr?t|co?mn|drv?|elm|end|f[lt]|hts?|ln|old|pkw?y|plc?|prk|pt|r[dm]|spc|s[qt]r?|srt|street|[nesw])\.?(?=\W|$)/i) { $1.capitalize } # if o[:address] # road features
+      s.gsub!(/(1st|2nd|3rd|[\d]th|de l[ao]s)\b/i) { $1.downcase } # ordinal numbers
+      s.gsub!(/(?<=^|\d |\b[nesw] |\b[ns][ew] )(d?el|las?|los)\b/i) { $1.capitalize } # uppercase (Spanish)
+      s.gsub!(/\b(ca|dba|fbo|ihop|mri|ucla|usa|vru|[ns][ew]|i{1,3}v?)\b/i) { $1.upcase } # force uppercase
+      s.gsub!(/\b([-@.\w]+\.(?:com|net|io|org))\b/i) { $1.downcase } # domain names, email (a little bastardized...)
+      s.gsub!(/# /, '#') # collapse spaces following a number sign
+      s.sub!(/[.,#]+$/, '') # nuke any trailing period, comma, or hash signs
+      s.sub!(/\bP\.? ?O\.? ?Box/i, 'PO Box') # PO Boxes
+      s
+    when 'zip'
+      cell =~ /^(\d{5})-?\d{4}?$/ ? $1 : '' # only allow 5-digit zip codes
+    when 'state'
+      $STATE_ABBREV[cell.upcase] || ''
+    else
+      if cell.respond_to?(func)
+        cell.send(func, *args)
+      else
+        warn "dude... you gave me the unknown func #{func.inspect}"
+        nil
+      end
+    end
+  end
+end
+
+def toon!(rows, rules)
+  todo = Hash[rules.scan(/^\s*(.*?)  +(.*?)(?:\s*#.*)?$/)]
+  seen = 0
+  diff = 0
+  rows.each_with_index do |cols, r|
+    seen += 1
+    todo.update(Hash[cols.map.with_index {|name, c| [c, [name, todo[name]]]}]) if seen == 1
+    cols.each_with_index do |cell, c|
+      name, func = todo[c]
+      orig = cell
+      cell = toon(cell, func) if func && seen > 1
+      if cell != orig
+        diff += 1
+        cols[c] = cell
+      end
+    end
+  end
+  # puts "#{diff} changes made" if diff > 0
+  rows
+end
