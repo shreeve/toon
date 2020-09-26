@@ -14,30 +14,6 @@ class Object
   alias :if_blank :present
 end
 
-def to_phone(str)
-  return "" if str.blank?
-
-  # prepare to parse
-  num = str.to_s.squeeze(' ').strip
-
-  # pluck off extension, tries several variants
-  num, ext = num.split(/\s*(?:ext?\.?|x|#|:|,)\s*/i, 2)
-  ext.gsub!(/\D+/,'') if ext
-
-  # adjust base number, allow only domestic phones
-  num = num.sub(/\A[^2-9]*/, '').gsub(/\D+/, '')
-
-  # assemble final number
-  if num =~ /\A([2-9][0-8][0-9])([2-9]\d\d)(\d{4})\z/
-    num = "(#{$1}) #{$2}-#{$3}"
-    num << ", ext. #{ext}" if num && ext
-  else
-    num = ext = nil
-  end
-
-  num
-end
-
 $STATE_MAP ||= <<~end.split(/(?:\n|  +)/).inject({}) {|h, e| h.store(*e.split(' ', 2)); h}
   AK Alaska                LA Louisiana       PA Pennsylvania
   AL Alabama               MA Massachusetts   PR Puerto Rico
@@ -63,15 +39,16 @@ end
 
 $STATE_ABBREV ||= $STATE_MAP.inject({}) {|h, (k, v)| h[k] = h[v.upcase] = k; h }
 
-def toon(cell, func=nil, *args, **opts, &code)
+def toon(str, func=nil, *args, **opts, &code)
   if block_given?
-    yield cell
+    yield str
   else
+    return if str.nil? #!# TOO CRAZY?
     case func
-    when nil then cell
+    when nil then str
     when 'to_decimal'
       prec = 2
-      if cell[/\A\s*\$?\s*([-+])?\s*\$?\s*([-+])?\s*(\d[,\d]*)?(\.\d*)?\s*\z/]
+      if str[/\A\s*\$?\s*([-+])?\s*\$?\s*([-+])?\s*(\d[,\d]*)?(\.\d*)?\s*\z/]
         sign = "#{$1}#{$2}".squeeze.include?("-") ? "-" : ""
         left = $3.blank? ? "0" : $3.delete(",")
         decs = $4.blank? ? nil : $4
@@ -79,10 +56,21 @@ def toon(cell, func=nil, *args, **opts, &code)
       else
         ""
       end
-    when 'to_phone' then to_phone(cell)
-    when 'to_zip'   then to_zip(cell)
+    when 'to_phone'
+      return "" if str.blank?
+      num = str.to_s.squeeze(' ').strip
+      num, ext = num.split(/\s*(?:ext?\.?|x|#|:|,)\s*/i, 2)
+      ext.gsub!(/\D+/,'') if ext
+      num = num.sub(/\A[^2-9]*/, '').gsub(/\D+/, '')
+      if num =~ /\A([2-9][0-8][0-9])([2-9]\d\d)(\d{4})\z/
+        num = "(#{$1}) #{$2}-#{$3}"
+        num << ", ext. #{ext}" if num && ext
+      else
+        num = ext = nil
+      end
+      num
     when 'to_yyyymmdd'
-      case cell
+      case str
         when /^((?:19|20)\d{2})(\d{2})(\d{2})$/      then "%s%s%s"       % [$1, $2, $3          ] # YYYYMMDD
         when /^(\d{2})(\d{2})((?:19|20)\d{2})$/      then "%s%s%s"       % [$3, $1, $2          ] # MMDDYYYY
         when /^(\d{1,2})([-\/.])(\d{1,2})\2(\d{4})$/ then "%s%02d%02d"   % [$4, $1.to_i, $3.to_i] # M/D/Y
@@ -94,10 +82,10 @@ def toon(cell, func=nil, *args, **opts, &code)
         else ""
       end
     when 'to_yyyymmdd_ymd'
-      toon(cell, 'to_yyyymmdd') =~ /^(\d{4})(\d{2})(\d{2})$/ ? "#{$2}/#{$3}/#{$1}" : cell
+      toon(str, 'to_yyyymmdd') =~ /^(\d{4})(\d{2})(\d{2})$/ ? "#{$2}/#{$3}/#{$1}" : str
     when 'tune'
       o = {}; opts.each {|e| o[e]=true}
-      s = cell
+      s = str
       s = s.downcase.gsub(/\s\s+/, ' ').strip.gsub(/(?<=^| |[\d[:punct:]])([[[:alpha:]]])/i) { $1.upcase } # general case
       s.gsub!(/\b([a-z])\. ?([bcdfghjklmnpqrstvwxyz])\.?(?=\W|$)/i) { "#$1#$2".upcase } # initials (should this be :name only?)
       s.gsub!(/\b([a-z](?:[a-z&&[^aeiouy]]{1,4}))\b/i) { $1.upcase } # uppercase apparent acronyms
@@ -114,13 +102,13 @@ def toon(cell, func=nil, *args, **opts, &code)
       s.sub!(/[.,#]+$/, '') # nuke any trailing period, comma, or hash signs
       s.sub!(/\bP\.? ?O\.? ?Box/i, 'PO Box') # PO Boxes
       s
-    when 'zip'
-      cell =~ /^(\d{5})-?\d{4}?$/ ? $1 : '' # only allow 5-digit zip codes
+    when 'zip', 'to_zip'
+      str =~ /^(\d{5})-?\d{4}?$/ ? $1 : '' # only allow 5-digit zip codes
     when 'state'
-      $STATE_ABBREV[cell.upcase] || ''
+      $STATE_ABBREV[str.upcase] || ''
     else
-      if cell.respond_to?(func)
-        cell.send(func, *args)
+      if str.respond_to?(func)
+        str.send(func, *args)
       else
         warn "dude... you gave me the unknown func #{func.inspect}"
         nil
