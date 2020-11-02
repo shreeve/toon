@@ -2,16 +2,7 @@ class Object
   def blank?
     respond_to?(:empty?) or return !self
     empty? or respond_to?(:strip) && strip.empty?
-  end
-
-  def present?
-    !blank?
-  end
-
-  def present(default=nil)
-    blank? ? default : self
-  end
-  alias :if_blank :present
+  end unless defined? blank?
 end
 
 $STATE_MAP ||= <<~end.split(/(?:\n|  +)/).inject({}) {|h, e| h.store(*e.split(' ', 2)); h}
