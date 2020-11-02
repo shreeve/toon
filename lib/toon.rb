@@ -82,8 +82,8 @@ def toon(str, func=nil, *args, **opts, &code)
       s = s.downcase.gsub(/\s\s+/, ' ').strip.gsub(/(?<=^| |[\d[:punct:]])([[[:alpha:]]])/i) { $1.upcase } # general case
       s.gsub!(/\b([a-z])\. ?([bcdfghjklmnpqrstvwxyz])\.?(?=\W|$)/i) { "#$1#$2".upcase } # initials (should this be :name only?)
       s.gsub!(/\b([a-z](?:[a-z&&[^aeiouy]]{1,4}))\b/i) { $1.upcase } # uppercase apparent acronyms
-      s.gsub!(/\b([djs]r|us|acct|[ai]nn?|apps|ed|erb|esq|grp|in[cj]|of[cf]|st|up)\.?(?=\W|$)/i) { $1.capitalize } # force camel-case
-      s.gsub!(/(^|(?<=\d ))?\b(and|at|as|of|the|in|on|or|for|to|by|de l[ao]s?|del?|(el-)|el|las)($)?\b/i) { ($1 || $3 || $4) ? $2.downcase.capitalize : $2.downcase } # prepositions
+      s.gsub!(/\b([djs]r|us|acct|[ai]nn?|all|apps|ed|erb|esq|grp|in[cj]|of[cf]|st|up)\.?(?=\W|$)/i) { $1.capitalize } # force camel-case
+      s.gsub!(/(^|(?<=\d ))?\b(and|at|as|of|the|in|not|on|or|for|to|by|de l[ao]s?|del?|(el-)|el|las)($)?\b/i) { ($1 || $3 || $4) ? $2.downcase.capitalize : $2.downcase } # prepositions
       s.gsub!(/\b(mc|mac(?=d[ao][a-k,m-z][a-z]|[fgmpw])|[dol]')([a-z])/i) { $1.capitalize + $2.capitalize } # mixed case (Irish)
       s.gsub!(/\b(ahn|an[gh]|al|art[sz]?|ash|e[dnv]|echt|elms|emms|eng|epps|essl|i[mp]|mrs?|ms|ng|ock|o[hm]|ong|orr|orth|ost|ott|oz|sng|tsz|u[br]|ung)\b/i) { $1.capitalize } # if o[:name] # capitalize
       s.gsub!(/(?<=^| |[[:punct:]])(apt?s?|arch|ave?|bldg|blvd|cr?t|co?mn|drv?|elm|end|f[lt]|hts?|ln|old|pkw?y|plc?|prk|pt|r[dm]|spc|s[qt]r?|srt|street|[nesw])\.?(?=\W|$)/i) { $1.capitalize } # if o[:address] # road features
