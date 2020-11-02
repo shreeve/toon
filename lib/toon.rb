@@ -37,6 +37,8 @@ def toon(str, func=nil, *args, **opts, &code)
     return if str.nil? #!# TOO CRAZY?
     case func
     when nil then str
+    when 'state'
+      $STATE_ABBREV[str.upcase] || ''
     when 'to_decimal'
       prec = 2
       if str[/\A\s*\$?\s*([-+])?\s*\$?\s*([-+])?\s*(\d[,\d]*)?(\.\d*)?\s*\z/]
@@ -95,8 +97,6 @@ def toon(str, func=nil, *args, **opts, &code)
       s
     when 'zip', 'to_zip'
       str =~ /^(\d{5})-?\d{4}?$/ ? $1 : '' # only allow 5-digit zip codes
-    when 'state'
-      $STATE_ABBREV[str.upcase] || ''
     else
       if str.respond_to?(func)
         str.send(func, *args)
