@@ -49,6 +49,16 @@ def toon(str, func=nil, *args, **opts, &code)
       else
         ""
       end
+    when 'to_map'
+      map = args[0]; map.is_a?(Hash) or raise "to_map unable to map using #{map.inspect}"
+      map.key?(str) ? map[str] : begin
+        case val = map[:else]
+          when :pass  then str
+          when Proc   then str.instance_eval(&val)
+          when Symbol then str.send(val)
+          else val
+        end
+      end
     when 'to_phone', 'phone'
       return "" if str.blank?
       num = str.to_s.squeeze(' ').strip
