@@ -49,7 +49,7 @@ def toon(str, func=nil, *args, **opts, &code)
       else
         ""
       end
-    when 'to_phone'
+    when 'to_phone', 'phone'
       return "" if str.blank?
       num = str.to_s.squeeze(' ').strip
       num, ext = num.split(/\s*(?:ext?\.?|x|#|:|,)\s*/i, 2)
@@ -97,6 +97,9 @@ def toon(str, func=nil, *args, **opts, &code)
       s
     when 'zip', 'to_zip'
       str =~ /^(\d{5})-?\d{4}?$/ ? $1 : '' # only allow 5-digit zip codes
+    when 'yn'
+      # {"Y"=>"Y","N"=>"N"}[str.to_s[0].upcase] || ""
+      str =~ /\A(y|yes|n|no)\z/i ? $1[0].upcase : '' # yes/no
     else
       if str.respond_to?(func)
         str.send(func, *args)
