@@ -1,3 +1,5 @@
+require 'zones'
+
 class Object
   def blank?
     respond_to?(:empty?) or return !self
@@ -37,6 +39,18 @@ def toon(str, func=nil, *args, **opts, &code)
     return if str.nil? #!# TOO CRAZY?
     case func
     when nil then str
+    when 'age' #!# FIXME: what about timezone shifts, etc?
+      dob = Date.new(*Time.parse_str(str)[0])
+      ref = args[0].respond_to?(:to_time) ? args[0].to_date : Date.today
+      yrs = ref.year - dob.year
+      yrs -= 1 if (ref.month < dob.month) || ((ref.month == dob.month) && (ref.day < dob.day))
+      yrs
+    when 'date'
+      str.to_tz.strftime("%m/%d/%Y") rescue ""
+    when 'Time'
+      str.to_tz
+    when 'timestamp'
+      str.to_tz.strftime("%m/%d/%Y %H:%M:%S") rescue ""
     when 'hispanic'
       str =~ /hispanic|latin/i ? "Y" : "N"
     when 'sex'
@@ -76,6 +90,8 @@ def toon(str, func=nil, *args, **opts, &code)
         num = ext = nil
       end
       num
+    when 'to_yyyymmdd_hmZ'
+      str.to_tz.utc.to_s[0...-4]
     when 'to_yyyymmdd'
       case str
         when /^((?:19|20)\d{2})(\d{2})(\d{2})$/      then "%s%s%s"       % [$1, $2, $3          ] # YYYYMMDD
@@ -90,6 +106,8 @@ def toon(str, func=nil, *args, **opts, &code)
       end
     when 'to_yyyymmdd_ymd'
       toon(str, 'to_yyyymmdd') =~ /^(\d{4})(\d{2})(\d{2})$/ ? "#{$2}/#{$3}/#{$1}" : str
+    when 'to_yyyymmdd_ymd_iso'
+      str.to_tz.utc.to_s[0...-4]
     when 'tune'
       o = {}; opts.each {|e| o[e]=true}
       s = str
