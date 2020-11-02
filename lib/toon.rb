@@ -37,6 +37,10 @@ def toon(str, func=nil, *args, **opts, &code)
     return if str.nil? #!# TOO CRAZY?
     case func
     when nil then str
+    when 'hispanic'
+      str =~ /hispanic|latin/i ? "Y" : "N"
+    when 'sex'
+      str =~ /\A(m|male|f|female|o|other)\z/i ? $1[0].upcase : '' # M/F/O
     when 'state'
       $STATE_ABBREV[str.upcase] || ''
     when 'to_decimal'
