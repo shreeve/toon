@@ -45,6 +45,12 @@ def toon(str, func=nil, *args, **opts, &code)
       yrs = ref.year - dob.year
       yrs -= 1 if (ref.month < dob.month) || ((ref.month == dob.month) && (ref.day < dob.day))
       yrs
+
+    when 'date_on' then str.to_tz.to_date                  rescue nil # date object
+    when 'time_at' then str.to_tz.getutc                   rescue nil # time object
+    when 'isodate' then str.to_tz.       strftime("%F"   ) rescue ""  # date string
+    when 'isotime' then str.to_tz.getutc.strftime("%F %T") rescue ""  # time string
+
     when 'date'
       str.to_tz.strftime("%m/%d/%Y") rescue ""
     when 'Time'
