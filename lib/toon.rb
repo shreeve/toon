@@ -136,7 +136,6 @@ def toon(str, func=nil, *args, **opts, &code)
     when 'zip', 'to_zip'
       str =~ /^(\d{5})-?\d{4}?$/ ? $1 : '' # only allow 5-digit zip codes
     when 'yn'
-      # {"Y"=>"Y","N"=>"N"}[str.to_s[0].upcase] || ""
       str =~ /\A(y|yes|n|no)\z/i ? $1[0].upcase : '' # yes/no
     else
       if str.respond_to?(func)
