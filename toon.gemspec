@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name        = "toon"
-  s.version     = "0.0.3"
+  s.version     = "0.0.4"
   s.author      = "Steve Shreeve"
   s.email       = "steve.shreeve@gmail.com"
   s.summary     = "A Ruby gem that makes it easy to cleanup and format data"

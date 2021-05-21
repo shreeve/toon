@@ -114,6 +114,8 @@ def toon(str, func=nil, *args, **opts, &code)
       toon(str, 'to_yyyymmdd') =~ /^(\d{4})(\d{2})(\d{2})$/ ? "#{$2}/#{$3}/#{$1}" : str
     when 'to_yyyymmdd_ymd_iso'
       str.to_tz.utc.to_s[0...-4]
+    when 'address'
+      toon(str, 'tune', opts: [:address])
     when 'tune'
       o = {}; opts.each {|e| o[e]=true}
       s = str
